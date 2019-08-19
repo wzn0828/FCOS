@@ -28,3 +28,7 @@ dist/
 # project dirs
 /datasets
 /models
+
+
+/Experiments
+/inference
