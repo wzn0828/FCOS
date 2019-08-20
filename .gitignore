@@ -32,3 +32,5 @@ dist/
 
 /Experiments
 /inference
+
+/fcos.egg-info
