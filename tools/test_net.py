@@ -50,7 +50,9 @@ def main():
     cfg.merge_from_list(args.opts)
     cfg.freeze()
 
-    save_dir = ""
+    save_dir = cfg.OUTPUT_DIR
+    if save_dir:
+        mkdir(save_dir)
     logger = setup_logger("fcos_core", save_dir, get_rank())
     logger.info("Using {} GPUs".format(num_gpus))
     logger.info(cfg)

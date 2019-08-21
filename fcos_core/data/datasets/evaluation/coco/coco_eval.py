@@ -319,7 +319,7 @@ def evaluate_predictions_on_coco(
     coco_eval = COCOeval(coco_gt, coco_dt, iou_type)
     coco_eval.evaluate()
     coco_eval.accumulate()
-    coco_eval.summarize()
+    coco_eval.summarize("fcos_core.inference")
 
     compute_thresholds_for_classes(coco_eval)
 
@@ -349,10 +349,11 @@ def compute_thresholds_for_classes(coco_eval):
     max_f_measure_inds = f_measure.argmax(axis=0)
     scores = scores[max_f_measure_inds, range(len(max_f_measure_inds))]
 
-    print("Maximum f-measures for classes:")
-    print(list(max_f_measure))
-    print("Score thresholds for classes (used in demos for visualization purposes):")
-    print(list(scores))
+    logger = logging.getLogger("fcos_core.inference")
+    logger.info("Maximum f-measures for classes:")
+    logger.info(list(max_f_measure))
+    logger.info("Score thresholds for classes (used in demos for visualization purposes):")
+    logger.info(list(scores))
 
 
 class COCOResults(object):
