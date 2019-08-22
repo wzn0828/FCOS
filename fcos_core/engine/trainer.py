@@ -5,6 +5,8 @@ import time
 
 import torch
 import torch.distributed as dist
+# from torch.utils.tensorboard import SummaryWriter
+from tensorboardX import SummaryWriter
 
 from fcos_core.utils.comm import get_world_size, is_pytorch_1_1_0_or_later
 from fcos_core.utils.metric_logger import MetricLogger
@@ -36,6 +38,7 @@ def reduce_loss_dict(loss_dict):
 
 
 def do_train(
+    cfg,
     model,
     data_loader,
     optimizer,
@@ -44,7 +47,11 @@ def do_train(
     device,
     checkpoint_period,
     arguments,
+    distributed
 ):
+    # tensorboard summary
+    tb_summary_writer = SummaryWriter(cfg.OUTPUT_DIR)
+
     logger = logging.getLogger("fcos_core.trainer")
     logger.info("Start training")
     meters = MetricLogger(delimiter="  ")
@@ -107,10 +114,24 @@ def do_train(
                     memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
                 )
             )
+
+            tb_summary_writer.add_scalar('learning_rate', optimizer.param_groups[0]["lr"], iteration)
+            tb_summary_writer.add_scalar('loss', losses_reduced, iteration)
+            for k, v in loss_dict_reduced.items():
+                tb_summary_writer.add_scalar(k, v, iteration)
+
         if iteration % checkpoint_period == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
         if iteration == max_iter:
             checkpointer.save("model_final", **arguments)
+
+        if cfg.TENSORBOARD.PARAS and iteration % cfg.TENSORBOARD.PERIOD == 0:
+            MODULE = model.module if distributed else model
+            for name, para in MODULE.named_parameters():
+                if para is not None:
+                    for para_name in cfg.TENSORBOARD.PARAS:
+                        if para_name in name:
+                            tb_summary_writer.add_histogram(name.replace('.', '/'), para, iteration)
 
     total_training_time = time.time() - start_training_time
     total_time_str = str(datetime.timedelta(seconds=total_training_time))

@@ -18,7 +18,7 @@ from yacs.config import CfgNode as CN
 # Config definition
 # -----------------------------------------------------------------------------
 
-_C = CN()
+_C = CN(new_allowed=True)
 
 _C.MODEL = CN()
 _C.MODEL.RPN_ONLY = False

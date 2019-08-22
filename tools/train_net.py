@@ -6,6 +6,9 @@ Basic training script for PyTorch
 # Set up custom environment before nearly anything else is imported
 # NOTE: this should be the first import (no not reorder)
 from fcos_core.utils.env import setup_environment  # noqa F401 isort:skip
+from my.custom import *
+set_gl_variable(LinearNorm, Conv2dNorm)
+# set_gl_variable(LinearNorm, Conv2dNorm, normlinear='8', normconv2d='8')
 
 import argparse
 import os
@@ -69,6 +72,7 @@ def train(cfg, local_rank, distributed):
     checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
 
     do_train(
+        cfg,
         model,
         data_loader,
         optimizer,
@@ -77,6 +81,7 @@ def train(cfg, local_rank, distributed):
         device,
         checkpoint_period,
         arguments,
+        distributed
     )
 
     return model
@@ -136,7 +141,6 @@ def main():
         default=None,
         nargs=argparse.REMAINDER,
     )
-
     args = parser.parse_args()
 
     num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else 1
@@ -150,6 +154,7 @@ def main():
         synchronize()
 
     cfg.merge_from_file(args.config_file)
+    cfg.merge_from_file('/home/wzn/PycharmProjects/FCOS/my/myconfig.yaml')
     cfg.merge_from_list(args.opts)
     cfg.freeze()
 

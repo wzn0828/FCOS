@@ -2,6 +2,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
+import my.custom as custom
 
 from fcos_core.modeling import registry
 from fcos_core.modeling.backbone import resnet
@@ -108,7 +109,7 @@ class FPNXconv1fcFeatureExtractor(nn.Module):
         xconvs = []
         for ix in range(num_stacked_convs):
             xconvs.append(
-                nn.Conv2d(
+                custom.Con2d_Class(
                     in_channels,
                     conv_head_dim,
                     kernel_size=3,
@@ -126,7 +127,7 @@ class FPNXconv1fcFeatureExtractor(nn.Module):
         self.add_module("xconvs", nn.Sequential(*xconvs))
         for modules in [self.xconvs,]:
             for l in modules.modules():
-                if isinstance(l, nn.Conv2d):
+                if isinstance(l, custom.Con2d_Class):
                     torch.nn.init.normal_(l.weight, std=0.01)
                     if not use_gn:
                         torch.nn.init.constant_(l.bias, 0)

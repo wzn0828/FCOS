@@ -9,6 +9,7 @@ from torch.nn import functional as F
 from fcos_core.config import cfg
 from fcos_core.layers import Conv2d
 from fcos_core.modeling.poolers import Pooler
+import my.custom as custom
 
 
 def get_group_gn(dim, dim_per_gp, num_groups):
@@ -83,10 +84,10 @@ def make_fc(dim_in, hidden_dim, use_gn=False):
         corresponds to kaiming_uniform_ in PyTorch
     '''
     if use_gn:
-        fc = nn.Linear(dim_in, hidden_dim, bias=False)
+        fc = custom.Linear_Class(dim_in, hidden_dim, bias=False)
         nn.init.kaiming_uniform_(fc.weight, a=1)
         return nn.Sequential(fc, group_norm(hidden_dim))
-    fc = nn.Linear(dim_in, hidden_dim)
+    fc = custom.Linear_Class(dim_in, hidden_dim)
     nn.init.kaiming_uniform_(fc.weight, a=1)
     nn.init.constant_(fc.bias, 0)
     return fc

@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 from fcos_core.modeling import registry
 from torch import nn
+import my.custom as custom
 
 
 @registry.ROI_BOX_PREDICTOR.register("FastRCNNPredictor")
@@ -13,9 +14,9 @@ class FastRCNNPredictor(nn.Module):
 
         num_classes = config.MODEL.ROI_BOX_HEAD.NUM_CLASSES
         self.avgpool = nn.AdaptiveAvgPool2d(1)
-        self.cls_score = nn.Linear(num_inputs, num_classes)
+        self.cls_score = custom.Linear_Class(num_inputs, num_classes)
         num_bbox_reg_classes = 2 if config.MODEL.CLS_AGNOSTIC_BBOX_REG else num_classes
-        self.bbox_pred = nn.Linear(num_inputs, num_bbox_reg_classes * 4)
+        self.bbox_pred = custom.Linear_Class(num_inputs, num_bbox_reg_classes * 4)
 
         nn.init.normal_(self.cls_score.weight, mean=0, std=0.01)
         nn.init.constant_(self.cls_score.bias, 0)
@@ -38,9 +39,9 @@ class FPNPredictor(nn.Module):
         num_classes = cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES
         representation_size = in_channels
 
-        self.cls_score = nn.Linear(representation_size, num_classes)
+        self.cls_score = custom.Linear_Class(representation_size, num_classes)
         num_bbox_reg_classes = 2 if cfg.MODEL.CLS_AGNOSTIC_BBOX_REG else num_classes
-        self.bbox_pred = nn.Linear(representation_size, num_bbox_reg_classes * 4)
+        self.bbox_pred = custom.Linear_Class(representation_size, num_bbox_reg_classes * 4)
 
         nn.init.normal_(self.cls_score.weight, std=0.01)
         nn.init.normal_(self.bbox_pred.weight, std=0.001)

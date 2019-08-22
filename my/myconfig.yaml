@@ -1,0 +1,3 @@
+TENSORBOARD:
+  PARAS: ['.g']
+  PERIOD: 100

@@ -3,6 +3,10 @@
 # NOTE: this should be the first import (no not reorder)
 from fcos_core.utils.env import setup_environment  # noqa F401 isort:skip
 
+from my.custom import *
+# set_gl_variable(LinearNorm, Conv2dNorm)
+set_gl_variable(LinearNorm, Conv2dNorm, normlinear='8', normconv2d='8')
+
 import argparse
 import os
 

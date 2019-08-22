@@ -2,6 +2,7 @@
 import torch
 import torch.nn.functional as F
 from torch import nn
+import my.custom as custom
 
 
 class FPN(nn.Module):
@@ -85,8 +86,8 @@ class LastLevelP6P7(nn.Module):
     """
     def __init__(self, in_channels, out_channels):
         super(LastLevelP6P7, self).__init__()
-        self.p6 = nn.Conv2d(in_channels, out_channels, 3, 2, 1)
-        self.p7 = nn.Conv2d(out_channels, out_channels, 3, 2, 1)
+        self.p6 = custom.Con2d_Class(in_channels, out_channels, 3, 2, 1)
+        self.p7 = custom.Con2d_Class(out_channels, out_channels, 3, 2, 1)
         for module in [self.p6, self.p7]:
             nn.init.kaiming_uniform_(module.weight, a=1)
             nn.init.constant_(module.bias, 0)

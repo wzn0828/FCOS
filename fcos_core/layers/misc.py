@@ -12,6 +12,7 @@ is implemented
 import math
 import torch
 from torch.nn.modules.utils import _ntuple
+import my.custom as custom
 
 
 class _NewEmptyTensorOp(torch.autograd.Function):
@@ -26,7 +27,7 @@ class _NewEmptyTensorOp(torch.autograd.Function):
         return _NewEmptyTensorOp.apply(grad, shape), None
 
 
-class Conv2d(torch.nn.Conv2d):
+class Conv2d(custom.Con2d_Class):
     def forward(self, x):
         if x.numel() > 0:
             return super(Conv2d, self).forward(x)
