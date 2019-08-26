@@ -3,7 +3,7 @@ import torch
 
 from .batch_norm import FrozenBatchNorm2d
 from .misc import Conv2d
-from .misc import Conv2dforBackboneBody
+from .misc import Conv2dTorch
 from .misc import ConvTranspose2d
 from .misc import BatchNorm2d
 from .misc import interpolate
@@ -18,6 +18,6 @@ from .iou_loss import IOULoss
 from .scale import Scale
 
 __all__ = ["nms", "roi_align", "ROIAlign", "roi_pool", "ROIPool",
-           "smooth_l1_loss", "Conv2d", "Conv2dforBackboneBody", "ConvTranspose2d", "interpolate",
+           "smooth_l1_loss", "Conv2d", "Conv2dTorch", "ConvTranspose2d", "interpolate",
            "BatchNorm2d", "FrozenBatchNorm2d", "SigmoidFocalLoss", "IOULoss",
            "Scale"]

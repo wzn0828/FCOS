@@ -23,7 +23,8 @@ import torch.nn.functional as F
 from torch import nn
 
 from fcos_core.layers import FrozenBatchNorm2d
-from fcos_core.layers import Conv2dforBackboneBody as Conv2d
+from fcos_core.layers import Conv2d
+from fcos_core.layers import Conv2dTorch
 from fcos_core.modeling.make_layers import group_norm
 from fcos_core.utils.registry import Registry
 
@@ -102,12 +103,17 @@ class ResNet(nn.Module):
         self.stages = []
         self.return_features = {}
         for stage_spec in stage_specs:
+            if stage_spec.index < cfg.MODEL.BACKBONE.FREEZE_CONV_BODY_AT:
+                conv = Conv2dTorch
+            else:
+                conv = Conv2d
             name = "layer" + str(stage_spec.index)
             stage2_relative_factor = 2 ** (stage_spec.index - 1)
             bottleneck_channels = stage2_bottleneck_channels * stage2_relative_factor
             out_channels = stage2_out_channels * stage2_relative_factor
             module = _make_stage(
                 transformation_module,
+                conv,
                 in_channels,
                 bottleneck_channels,
                 out_channels,
@@ -197,6 +203,7 @@ class ResNetHead(nn.Module):
 
 def _make_stage(
     transformation_module,
+    conv,
     in_channels,
     bottleneck_channels,
     out_channels,
@@ -211,6 +218,7 @@ def _make_stage(
     for _ in range(block_count):
         blocks.append(
             transformation_module(
+                conv,
                 in_channels,
                 bottleneck_channels,
                 out_channels,
@@ -228,6 +236,7 @@ def _make_stage(
 class Bottleneck(nn.Module):
     def __init__(
         self,
+        conv,
         in_channels,
         bottleneck_channels,
         out_channels,
@@ -243,7 +252,7 @@ class Bottleneck(nn.Module):
         if in_channels != out_channels:
             down_stride = stride if dilation == 1 else 1
             self.downsample = nn.Sequential(
-                Conv2d(
+                conv(
                     in_channels, out_channels,
                     kernel_size=1, stride=down_stride, bias=False
                 ),
@@ -251,7 +260,7 @@ class Bottleneck(nn.Module):
             )
             for modules in [self.downsample,]:
                 for l in modules.modules():
-                    if isinstance(l, Conv2d):
+                    if isinstance(l, conv):
                         nn.init.kaiming_uniform_(l.weight, a=1)
 
         if dilation > 1:
@@ -262,7 +271,7 @@ class Bottleneck(nn.Module):
         # stride in the 3x3 conv
         stride_1x1, stride_3x3 = (stride, 1) if stride_in_1x1 else (1, stride)
 
-        self.conv1 = Conv2d(
+        self.conv1 = conv(
             in_channels,
             bottleneck_channels,
             kernel_size=1,
@@ -272,7 +281,7 @@ class Bottleneck(nn.Module):
         self.bn1 = norm_func(bottleneck_channels)
         # TODO: specify init for the above
 
-        self.conv2 = Conv2d(
+        self.conv2 = conv(
             bottleneck_channels,
             bottleneck_channels,
             kernel_size=3,
@@ -284,7 +293,7 @@ class Bottleneck(nn.Module):
         )
         self.bn2 = norm_func(bottleneck_channels)
 
-        self.conv3 = Conv2d(
+        self.conv3 = conv(
             bottleneck_channels, out_channels, kernel_size=1, bias=False
         )
         self.bn3 = norm_func(out_channels)
@@ -321,7 +330,12 @@ class BaseStem(nn.Module):
 
         out_channels = cfg.MODEL.RESNETS.STEM_OUT_CHANNELS
 
-        self.conv1 = Conv2d(
+        if cfg.MODEL.BACKBONE.FREEZE_CONV_BODY_AT < 0:
+            conv = Conv2d
+        else:
+            conv = Conv2dTorch
+
+        self.conv1 = conv(
             3, out_channels, kernel_size=7, stride=2, padding=3, bias=False
         )
         self.bn1 = norm_func(out_channels)
@@ -340,6 +354,7 @@ class BaseStem(nn.Module):
 class BottleneckWithFixedBatchNorm(Bottleneck):
     def __init__(
         self,
+        conv,
         in_channels,
         bottleneck_channels,
         out_channels,
@@ -349,6 +364,7 @@ class BottleneckWithFixedBatchNorm(Bottleneck):
         dilation=1
     ):
         super(BottleneckWithFixedBatchNorm, self).__init__(
+            conv=conv,
             in_channels=in_channels,
             bottleneck_channels=bottleneck_channels,
             out_channels=out_channels,
