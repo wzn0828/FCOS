@@ -27,10 +27,10 @@ class _NewEmptyTensorOp(torch.autograd.Function):
         return _NewEmptyTensorOp.apply(grad, shape), None
 
 
-class Conv2dTorch(torch.nn.Conv2d):
+class Conv2dforBackboneBody(torch.nn.Conv2d):
     def forward(self, x):
         if x.numel() > 0:
-            return super(Conv2dTorch, self).forward(x)
+            return super(Conv2dforBackboneBody, self).forward(x)
         # get output shape
 
         output_shape = [
