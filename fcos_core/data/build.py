@@ -104,7 +104,7 @@ def make_batch_data_sampler(
     return batch_sampler
 
 
-def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
+def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, worker_init_fn=None):
     num_gpus = get_world_size()
     if is_train:
         images_per_batch = cfg.SOLVER.IMS_PER_BATCH
@@ -165,7 +165,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0):
             dataset,
             num_workers=num_workers,
             batch_sampler=batch_sampler,
-            collate_fn=collator,
+            collate_fn=collator, worker_init_fn=worker_init_fn
         )
         data_loaders.append(data_loader)
     if is_train:

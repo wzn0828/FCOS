@@ -29,6 +29,15 @@ from fcos_core.utils.imports import import_file
 from fcos_core.utils.logger import setup_logger
 from fcos_core.utils.miscellaneous import mkdir
 
+# Random seed, for deterministic behavior
+import torch.backends.cudnn as cudnn
+import random
+cudnn.benchmark = False
+cudnn.deterministic = True
+random.seed(123)
+torch.manual_seed(123)
+torch.cuda.manual_seed_all(123)
+# still need to set the work_init_fn to random.seed in train_dataloader, if multi numworkers
 
 def train(cfg, local_rank, distributed):
     model = build_detection_model(cfg)
@@ -67,6 +76,7 @@ def train(cfg, local_rank, distributed):
         is_train=True,
         is_distributed=distributed,
         start_iter=arguments["iteration"],
+        worker_init_fn=random.seed
     )
 
     checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
