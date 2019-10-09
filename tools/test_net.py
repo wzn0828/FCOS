@@ -5,7 +5,7 @@ from fcos_core.utils.env import setup_environment  # noqa F401 isort:skip
 
 from my.custom import *
 # set_gl_variable(LinearNorm, Conv2dNorm)
-set_gl_variable(LinearNorm, Conv2dNorm, normlinear='8', normconv2d='8')
+set_gl_variable(conv1=nn.Conv2d, conv2=Conv2dNorm, normconv2d='3-4')
 
 import argparse
 import os
