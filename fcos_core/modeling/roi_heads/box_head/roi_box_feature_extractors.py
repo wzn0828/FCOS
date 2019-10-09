@@ -127,8 +127,9 @@ class FPNXconv1fcFeatureExtractor(nn.Module):
         self.add_module("xconvs", nn.Sequential(*xconvs))
         for modules in [self.xconvs,]:
             for l in modules.modules():
-                if isinstance(l, custom.Con2d_Class):
+                if isinstance(l, (custom.Con2d_Class, custom.Con2d_2)):
                     torch.nn.init.normal_(l.weight, std=0.01)
+                    custom.init_g_conv(l)
                     if not use_gn:
                         torch.nn.init.constant_(l.bias, 0)
 

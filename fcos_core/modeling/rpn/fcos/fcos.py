@@ -48,7 +48,7 @@ class FCOSHead(torch.nn.Module):
 
         self.add_module('cls_tower', nn.Sequential(*cls_tower))
         self.add_module('bbox_tower', nn.Sequential(*bbox_tower))
-        self.cls_logits = custom.Con2d_Class(
+        self.cls_logits = custom.Con2d_2(
             in_channels, num_classes, kernel_size=3, stride=1,
             padding=1
         )
@@ -66,9 +66,10 @@ class FCOSHead(torch.nn.Module):
                         self.cls_logits, self.bbox_pred,
                         self.centerness]:
             for l in modules.modules():
-                if isinstance(l, custom.Con2d_Class):
+                if isinstance(l, (custom.Con2d_Class, custom.Con2d_2)):
                     torch.nn.init.normal_(l.weight, std=0.01)
                     torch.nn.init.constant_(l.bias, 0)
+                    custom.init_g_conv(l)
 
         # initialize the bias for focal loss
         prior_prob = cfg.MODEL.FCOS.PRIOR_PROB
