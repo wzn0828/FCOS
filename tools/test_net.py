@@ -30,7 +30,7 @@ def main():
         metavar="FILE",
         help="path to config file",
     )
-    parser.add_argument("--local_rank", type=int, default=0)
+    parser.add_argument("--local_rank", type=int, default=1)
     parser.add_argument(
         "opts",
         help="Modify config options using the command-line",
@@ -43,6 +43,7 @@ def main():
     num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else 1
     distributed = num_gpus > 1
 
+    torch.cuda.set_device(args.local_rank)
     if distributed:
         torch.cuda.set_device(args.local_rank)
         torch.distributed.init_process_group(
