@@ -3,12 +3,11 @@ r"""
 Basic training script for PyTorch
 """
 
-# Set up custom environment before nearly anything else is imported
 # NOTE: this should be the first import (no not reorder)
 from fcos_core.utils.env import setup_environment  # noqa F401 isort:skip
+
 from my.custom import *
-set_gl_variable(LinearNorm, Conv2dNorm)
-# set_gl_variable(LinearNorm, Conv2dNorm, normlinear='8', normconv2d='8')
+set_gl_variable(PRLinear, PRConv2d)
 
 import argparse
 import os
