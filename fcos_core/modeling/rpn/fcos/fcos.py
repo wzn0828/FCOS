@@ -24,7 +24,7 @@ class FCOSHead(torch.nn.Module):
         bbox_tower = []
         for i in range(cfg.MODEL.FCOS.NUM_CONVS):
             cls_tower.append(
-                custom.Con2d_Class(
+                custom.Con2d_Head(
                     in_channels,
                     in_channels,
                     kernel_size=3,
@@ -35,7 +35,7 @@ class FCOSHead(torch.nn.Module):
             cls_tower.append(nn.GroupNorm(32, in_channels))
             cls_tower.append(nn.ReLU())
             bbox_tower.append(
-                custom.Con2d_Class(
+                custom.Con2d_Head(
                     in_channels,
                     in_channels,
                     kernel_size=3,
@@ -48,15 +48,15 @@ class FCOSHead(torch.nn.Module):
 
         self.add_module('cls_tower', nn.Sequential(*cls_tower))
         self.add_module('bbox_tower', nn.Sequential(*bbox_tower))
-        self.cls_logits = custom.Con2d_Class(
+        self.cls_logits = custom.Con2d_Head(
             in_channels, num_classes, kernel_size=3, stride=1,
             padding=1
         )
-        self.bbox_pred = custom.Con2d_Class(
+        self.bbox_pred = custom.Con2d_Head(
             in_channels, 4, kernel_size=3, stride=1,
             padding=1
         )
-        self.centerness = custom.Con2d_Class(
+        self.centerness = custom.Con2d_Head(
             in_channels, 1, kernel_size=3, stride=1,
             padding=1
         )
@@ -66,7 +66,7 @@ class FCOSHead(torch.nn.Module):
                         self.cls_logits, self.bbox_pred,
                         self.centerness]:
             for l in modules.modules():
-                if isinstance(l, custom.Con2d_Class):
+                if isinstance(l, (custom.Con2d_Class, custom.Con2d_Head)):
                     torch.nn.init.normal_(l.weight, std=0.01)
                     torch.nn.init.constant_(l.bias, 0)
 

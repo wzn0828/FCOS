@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 Linear_Class = nn.Linear
 Con2d_Class = nn.Conv2d
+Con2d_Head = nn.Conv2d
 BN_Class = nn.BatchNorm2d
 _detach = None
 _normlinear = None
@@ -11,13 +12,16 @@ _normconv2d = None
 _coeff = True
 
 
-def set_gl_variable(linear=nn.Linear, conv=nn.Conv2d, bn=nn.BatchNorm2d, detach=None, normlinear=None, normconv2d=None, coeff=True):
+def set_gl_variable(linear=nn.Linear, conv=nn.Conv2d, convHead=nn.Conv2d, bn=nn.BatchNorm2d, detach=None, normlinear=None, normconv2d=None, coeff=True):
 
     global Linear_Class
     Linear_Class = linear
 
     global Con2d_Class
     Con2d_Class = conv
+
+    global Con2d_Head
+    Con2d_Head = convHead
 
     global BN_Class
     BN_Class = bn
