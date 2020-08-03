@@ -319,7 +319,7 @@ def evaluate_predictions_on_coco(
     coco_eval = COCOeval(coco_gt, coco_dt, iou_type)
     coco_eval.evaluate()
     coco_eval.accumulate()
-    coco_eval.summarize("fcos_core.inference")
+    coco_eval.summarize()
 
     compute_thresholds_for_classes(coco_eval)
 
