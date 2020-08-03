@@ -4,12 +4,16 @@ import logging
 import time
 
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import torch.distributed as dist
 # from torch.utils.tensorboard import SummaryWriter
 from tensorboardX import SummaryWriter
 
 from fcos_core.utils.comm import get_world_size, is_pytorch_1_1_0_or_later
 from fcos_core.utils.metric_logger import MetricLogger
+
+import my.custom as custom
 
 
 def reduce_loss_dict(loss_dict):
@@ -82,6 +86,25 @@ def do_train(
         losses_reduced = sum(loss for loss in loss_dict_reduced.values())
         meters.update(loss=losses_reduced, **loss_dict_reduced)
 
+        #　mma loss
+        if cfg.mma_fpn:
+            for name, m in model.module.backbone.fpn.named_modules():
+                if isinstance(m, (custom.Con2d_Class, custom.Con2d_Head, nn.Conv2d)):
+                    mmaloss = get_angular_loss(m.weight)
+                    if cfg.mma_fpn_weight != 0:
+                        losses = losses + cfg.mma_fpn_weight * mmaloss
+        if cfg.mma_head:
+            for name, m in model.module.rpn.head.named_modules():
+                if isinstance(m, (custom.Con2d_Class, custom.Con2d_Head, nn.Conv2d)):
+                    mmaloss = get_angular_loss(m.weight)
+                    if cfg.mma_head_weight != 0:
+                        losses = losses + cfg.mma_head_weight * mmaloss
+
+        if cfg.mma_cls:
+            mmaloss = get_angular_loss(model.module.rpn.head.cls_logits.weight)
+            if cfg.mma_cls_weight != 0:
+                losses = losses + cfg.mma_cls_weight * mmaloss
+
         optimizer.zero_grad()
         losses.backward()
         optimizer.step()
@@ -140,3 +163,27 @@ def do_train(
             total_time_str, total_training_time / (max_iter)
         )
     )
+
+
+def get_angular_loss(weight):
+    '''
+    :param weight: parameter of model, out_features *　in_features
+    :return: angular loss
+    '''
+    if weight.size(0) == 1:
+        return 0.0
+
+    # for convolution layers, flatten
+    if weight.dim() > 2:
+        weight = weight.view(weight.size(0), -1)
+
+    # Dot product of normalized prototypes is cosine similarity.
+    weight_ = F.normalize(weight, p=2, dim=1)
+    product = torch.matmul(weight_, weight_.t())
+
+    # Remove diagnonal from loss
+    product_ = product - 2. * torch.diag(torch.diag(product))
+    # Maxmize the minimum theta.
+    loss = -torch.acos(product_.max(dim=1)[0].clamp(-0.99999, 0.99999)).mean()
+
+    return loss

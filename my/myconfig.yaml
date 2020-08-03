@@ -1,3 +1,10 @@
 TENSORBOARD:
   PARAS: ['.g']
   PERIOD: 300
+mma_fpn: True
+mma_head: True
+mma_cls: False
+mma_fpn_weight: 0.01
+mma_head_weight: 0.01
+mma_cls_weight: 0.03
+
