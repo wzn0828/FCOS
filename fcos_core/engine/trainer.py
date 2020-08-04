@@ -77,7 +77,7 @@ def do_train(
         images = images.to(device)
         targets = [target.to(device) for target in targets]
 
-        loss_dict = model(images, targets)
+        loss_dict, cosines = model(images, targets)
 
         losses = sum(loss for loss in loss_dict.values())
 
@@ -99,11 +99,15 @@ def do_train(
                     mmaloss = get_angular_loss(m.weight)
                     if cfg.mma_head_weight != 0:
                         losses = losses + cfg.mma_head_weight * mmaloss
-
         if cfg.mma_cls:
             mmaloss = get_angular_loss(model.module.rpn.head.cls_logits.weight)
             if cfg.mma_cls_weight != 0:
                 losses = losses + cfg.mma_cls_weight * mmaloss
+
+        # dma loss
+        if cfg.dma and cfg.dma_weight != 0:
+            for cosine in cosines:
+                losses = losses + cfg.dma_weight * dma_loss(cosine.permute(0, 2, 3, 1).contiguous().view(-1, 80))
 
         optimizer.zero_grad()
         losses.backward()
@@ -185,5 +189,15 @@ def get_angular_loss(weight):
     product_ = product - 2. * torch.diag(torch.diag(product))
     # Maxmize the minimum theta.
     loss = -torch.acos(product_.max(dim=1)[0].clamp(-0.99999, 0.99999)).mean()
+
+    return loss
+
+
+def dma_loss(cosine):
+    # pick the labeled  cos  theta
+    max_cos = cosine.max(dim=1)[0]  # B
+    min_theta = torch.acos(max_cos)  # B
+
+    loss = 0.5 * min_theta.pow(2).mean()
 
     return loss

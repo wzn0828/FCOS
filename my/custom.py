@@ -5,6 +5,7 @@ import torch.nn.functional as F
 Linear_Class = nn.Linear
 Con2d_Class = nn.Conv2d
 Con2d_Head = nn.Conv2d
+Con2d_Cls = nn.Conv2d
 BN_Class = nn.BatchNorm2d
 _detach = None
 _normlinear = None
@@ -12,7 +13,7 @@ _normconv2d = None
 _coeff = True
 
 
-def set_gl_variable(linear=nn.Linear, conv=nn.Conv2d, convHead=nn.Conv2d, bn=nn.BatchNorm2d, detach=None, normlinear=None, normconv2d=None, coeff=True):
+def set_gl_variable(linear=nn.Linear, conv=nn.Conv2d, convHead=nn.Conv2d, convCls=nn.Conv2d, bn=nn.BatchNorm2d, detach=None, normlinear=None, normconv2d=None, coeff=True):
 
     global Linear_Class
     Linear_Class = linear
@@ -22,6 +23,9 @@ def set_gl_variable(linear=nn.Linear, conv=nn.Conv2d, convHead=nn.Conv2d, bn=nn.
 
     global Con2d_Head
     Con2d_Head = convHead
+
+    global Con2d_Cls
+    Con2d_Cls = convCls
 
     global BN_Class
     BN_Class = bn
@@ -610,6 +614,55 @@ class PRConv2d(nn.Conv2d):
 
         return out
 
+
+
+class PRConv2d_cosine(nn.Conv2d):
+
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1,
+                 padding=0, dilation=1, groups=1, bias=True, eps=1e-8):
+        super(PRConv2d_cosine, self).__init__(
+            in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias)
+
+        assert groups == 1, 'Currently, we do not realize the PR for group CNN. Maybe you can do it yourself and welcome for pull-request.'
+
+        self.eps = eps
+        self.register_buffer('ones_weight', torch.ones((1, 1, self.weight.size(2), self.weight.size(3))))
+
+    def forward(self, input):
+        # compute the length of w
+        w_len = torch.sqrt((self.weight.view(self.weight.size(0), -1).pow(2).sum(dim=1, keepdim=True).t()).clamp_(
+            min=self.eps))  # 1*out_channels
+
+        # compute the length of x at each position with the help of convolutional operation
+        x_len = input.pow(2).sum(dim=1, keepdim=True)  # batch*1*H_in*W_in
+        x_len = torch.sqrt((F.conv2d(x_len, self.ones_weight, None,
+                                     self.stride,
+                                     self.padding, self.dilation, self.groups)).clamp_(
+            min=self.eps))  # batch*1*H_out*W_out
+
+        # compute the cosine of theta and abs(sine) of theta.
+        wx_len = (x_len * (w_len.unsqueeze(-1).unsqueeze(-1))).clamp_(min=self.eps)  # batch*out_channels*H_out*W_out
+        cos_theta = (F.conv2d(input, self.weight, None, self.stride,
+                              self.padding, self.dilation, self.groups) / wx_len).clamp_(-1.0,
+                                                                                         1.0)  # batch*out_channels*H_out*W_out
+        abs_sin_theta = torch.sqrt(1.0 - cos_theta ** 2)
+
+        # PR Product
+        out = wx_len * (abs_sin_theta.detach() * cos_theta + cos_theta.detach() * (1.0 - abs_sin_theta))
+
+        # DMA regularization: compute the cosine with the weight detached
+        wx_len2 = (x_len * (w_len.detach().unsqueeze(-1).unsqueeze(-1))).clamp_(min=self.eps)  # batch*out_channels*H_out*W_out
+        cos_theta2 = (F.conv2d(input, self.weight.detach(), None, self.stride,
+                              self.padding, self.dilation, self.groups) / wx_len2).clamp_(-1.0,
+                                                                                         1.0)  # batch*out_channels*H_out*W_out
+
+        # to save memory
+        del w_len, x_len, wx_len, cos_theta, abs_sin_theta, wx_len2
+
+        if self.bias is not None:
+            out = out + self.bias.unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+
+        return out, cos_theta2
 
 
 

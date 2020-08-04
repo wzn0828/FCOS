@@ -4,7 +4,7 @@
 from fcos_core.utils.env import setup_environment  # noqa F401 isort:skip
 
 from my.custom import *
-set_gl_variable(conv=nn.Conv2d, convHead=PRConv2d)
+set_gl_variable(conv=nn.Conv2d, convHead=PRConv2d, convCls=PRConv2d_cosine)
 
 import argparse
 import os

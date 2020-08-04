@@ -48,7 +48,7 @@ class FCOSHead(torch.nn.Module):
 
         self.add_module('cls_tower', nn.Sequential(*cls_tower))
         self.add_module('bbox_tower', nn.Sequential(*bbox_tower))
-        self.cls_logits = custom.Con2d_Head(
+        self.cls_logits = custom.Con2d_Cls(
             in_channels, num_classes, kernel_size=3, stride=1,
             padding=1
         )
@@ -79,16 +79,19 @@ class FCOSHead(torch.nn.Module):
 
     def forward(self, x):
         logits = []
+        detached_cosines = []
         bbox_reg = []
         centerness = []
         for l, feature in enumerate(x):
             cls_tower = self.cls_tower(feature)
-            logits.append(self.cls_logits(cls_tower))
+            cls_reture = self.cls_logits(cls_tower)
+            logits.append(cls_reture[0])
+            detached_cosines.append(cls_reture[1])
             centerness.append(self.centerness(cls_tower))
             bbox_reg.append(torch.exp(self.scales[l](
                 self.bbox_pred(self.bbox_tower(feature))
             )))
-        return logits, bbox_reg, centerness
+        return logits, bbox_reg, centerness, detached_cosines
 
 
 class FCOSModule(torch.nn.Module):
@@ -125,7 +128,7 @@ class FCOSModule(torch.nn.Module):
             losses (dict[Tensor]): the losses for the model during training. During
                 testing, it is an empty dict.
         """
-        box_cls, box_regression, centerness = self.head(features)
+        box_cls, box_regression, centerness, cosines = self.head(features)
         locations = self.compute_locations(features)
  
         if self.training:
@@ -133,12 +136,12 @@ class FCOSModule(torch.nn.Module):
                 locations, box_cls, 
                 box_regression, 
                 centerness, targets
-            )
+            ) + (cosines,)
         else:
             return self._forward_test(
                 locations, box_cls, box_regression, 
                 centerness, images.image_sizes
-            )
+            ) + (cosines,)
 
     def _forward_train(self, locations, box_cls, box_regression, centerness, targets):
         loss_box_cls, loss_box_reg, loss_centerness = self.loss_evaluator(
